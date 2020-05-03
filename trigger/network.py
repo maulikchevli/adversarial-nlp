@@ -24,7 +24,7 @@ class RNN(nn.Module):
         embedded = self.dropout(self.embedding(text))
 
         # Pack sequence
-        packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_length)
+        packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_length, enforce_sorted=False)
         self.rnn.flatten_parameters()
         packed_output, (hidden, cell) = self.rnn(packed_embedded)
         # Unpack sequence
@@ -32,4 +32,3 @@ class RNN(nn.Module):
 
         hidden = self.dropout(torch.cat((hidden[-2, :, :], hidden[-1, :, :]), dim=1))
         return self.fc(hidden)
-

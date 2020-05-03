@@ -68,7 +68,7 @@ def get_loss_per_candidate(index, model, batch, trigger_token_ids, cand_trigger_
 
     loss_per_candidate = []
     # loss for the trigger without trying the candidates
-    curr_loss = evaluate_batch(model, batch, trigger_token_ids)['loss'] \
+    curr_loss = evaluate_batch_trigger(model, batch, criterion, trigger_token_ids)['loss'] \
                     .cpu().detach().numpy()
 
     loss_per_candidate.append((deepcopy(trigger_token_ids), curr_loss))
@@ -76,7 +76,7 @@ def get_loss_per_candidate(index, model, batch, trigger_token_ids, cand_trigger_
         trigger_token_ids_one_replaced = deepcopy(trigger_token_ids) # copy trigger
         trigger_token_ids_one_replaced[index] = cand_trigger_token_ids[index][cand_id] # replace one token
 
-        loss = evaluate_batch(model, batch, trigger_token_ids_one_replaced)['loss'].cpu().detach().numpy()
+        loss = evaluate_batch_trigger(model, batch, criterion, trigger_token_ids_one_replaced)['loss'].cpu().detach().numpy()
         loss_per_candidate.append((deepcopy(trigger_token_ids_one_replaced), loss))
 
     return loss_per_candidate
