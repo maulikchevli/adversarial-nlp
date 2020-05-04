@@ -10,8 +10,8 @@ import copy
 import random
 import time
 
-# from utils import *
-# from network import RNN
+from utils import *
+from network import RNN
 
 SEED = 1
 torch.manual_seed(SEED)
@@ -45,14 +45,6 @@ def evaluate_batch(model, batch, criterion):
 
     return loss.item(), acc.item()
 
-
-def accuracy(y_pred, y_orig):
-    y_pred = torch.round(torch.sigmoid(y_pred))
-    correct = (y_pred == y_orig).float()
-    accuracy = correct.sum() / len(correct)
-
-    return accuracy
-
 def time_min_sec(s, e):
     diff = e - s
     diff_min = int(diff / 60)
@@ -63,37 +55,6 @@ def time_min_sec(s, e):
 extracted_grads = []
 def extract_grad_hook(module, grad_in, grad_out):
     extracted_grads.append(grad_out[0])
-
-def get_accuracy(model, iterator, criterion,trigger_token_ids):
-    epoch_acc = 0
-
-    print("Finding accuracy...")
-    pbar = tqdm(enumerate(iterator), total=len(iterator))
-    for _, batch in pbar:
-        model.eval()
-        res = evaluate_batch_trigger(model, batch, criterion, trigger_token_ids)
-
-        epoch_acc += res['acc']
-    return epoch_acc / len(iterator)
-
-def evaluate_batch_trigger(model, batch, criterion,trigger_token_ids):
-    # model.eval()
-    text, text_lengths = batch.text
-    num_trigger_tokens = len(trigger_token_ids)
-
-    # Append trigger tokens
-    with torch.no_grad():
-        trigger_sequence_tensor = torch.LongTensor(copy.deepcopy(trigger_token_ids)).unsqueeze(1) # or 2
-        trigger_sequence_tensor = trigger_sequence_tensor.repeat(1, batch.label.shape[0]) # batch_size is global
-        b_text = torch.cat((trigger_sequence_tensor, text))
-        # Add text length
-        b_text_lengths = text_lengths + num_trigger_tokens
-    
-        y_pred = model(b_text.cuda(), b_text_lengths.cuda()).squeeze(1)
-        loss = criterion(y_pred, batch.label.to(device))
-        acc = accuracy(y_pred, batch.label.cuda())
-
-    return {'acc': acc, 'loss': loss}
 
 def main():
     # Include length for packed padded sequence
@@ -208,7 +169,7 @@ def main():
         print_string = ""
         for idx in trigger_token_ids:
             print_string = print_string + c_text.vocab.itos[idx] + ', '
-        print("Current Triggers: " + print_string + " : " + str(get_accuracy(model, target_iter, criterion,trigger_token_ids).item()))
+        print("Current Triggers: " + print_string + " : " + str(get_accuracy(model, target_iter, criterion,trigger_token_ids, device).item()))
     
         # Get Average grad
         ###
@@ -260,11 +221,12 @@ def main():
                                                         batch,
                                                         criterion,
                                                         trigger_token_ids,
-                                                        cand_trigger_token_ids)
+                                                        cand_trigger_token_ids,
+                                                        device)
     print_string = ""
     for idx in trigger_token_ids:
         print_string = print_string + c_text.vocab.itos[idx] + ', '
-    print("Current Triggers: " + print_string + " : " + str(get_accuracy(model, target_iter, criterion, trigger_token_ids).item()))
+    print("Current Triggers: " + print_string + " : " + str(get_accuracy(model, target_iter, criterion, trigger_token_ids, device).item()))
 
 if __name__ == "__main__":
     main()
