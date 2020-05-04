@@ -177,90 +177,94 @@ def main():
         pbar.set_postfix_str("e: {}/{} => (T/V) Loss: {:.3f} | {:.3f}, Acc: {:.3f} | {:.3f}\n". format(
             epoch, EPOCHS, loss, val_loss, acc*100, val_acc*100))        
 
-        '''
-        Triggers
-        '''
-        # Attach hooks for gradients
-        global extracted_grads
-        extracted_grads = []
-        for module in model.modules():
-            if isinstance(module, nn.Embedding):
-                module.register_backward_hook(extract_grad_hook)
+    '''
+    Triggers
+    '''
+    # Attach hooks for gradients
+    global extracted_grads
+    extracted_grads = []
+    for module in model.modules():
+        if isinstance(module, nn.Embedding):
+            module.register_backward_hook(extract_grad_hook)
 
-        # Filter target dataset
-        dataset_label_filter = "pos"
-        targeted_dev_data = []
-        for instance in train_data:
-            if instance.label == dataset_label_filter:
-                targeted_dev_data.append(instance)
-        
-        target_data = tt.data.Dataset(targeted_dev_data, fields=[('text', c_text), ('label', c_label)])
-        target_iter = tt.data.Iterator(target_data, batch_size=batch_size, shuffle = True,
-                                       sort_key=lambda x: x.text[1])
-
-        # Trigger tokens
-        num_trigger_tokens = 3
-        trigger_token_ids = [c_text.vocab.stoi["nice"]] * num_trigger_tokens
+    # Filter target dataset
+    dataset_label_filter = "pos"
+    targeted_dev_data = []
+    for instance in train_data:
+        if instance.label == dataset_label_filter:
+            targeted_dev_data.append(instance)
     
-        TRIGGER_EPOCHS = 1
-        for epoch in range(TRIGGER_EPOCHS):
-            # Get Accuracy
-            print_string = ""
-            for idx in trigger_token_ids:
-                print_string = print_string + c_text.vocab.itos[idx] + ', '
-            print("Current Triggers: " + print_string + " : " + str(get_accuracy(model, target_iter, criterion,trigger_token_ids).item()))
-        
-            # Get Average grad
-            ###
-            for batch in target_iter:
-                text, text_lengths = batch.text
+    target_data = tt.data.Dataset(targeted_dev_data, fields=[('text', c_text), ('label', c_label)])
+    target_iter = tt.data.Iterator(target_data, batch_size=batch_size, shuffle = True,
+                                    sort_key=lambda x: x.text[1])
 
-                optimizer.zero_grad()
-                # Reset extracted_grads as in next step we get element at index 0
+    # Trigger tokens
+    num_trigger_tokens = 3
+    trigger_token_ids = [c_text.vocab.stoi["nice"]] * num_trigger_tokens
+
+    TRIGGER_EPOCHS = 1
+    for epoch in range(TRIGGER_EPOCHS):
+        # Get Accuracy
+        print_string = ""
+        for idx in trigger_token_ids:
+            print_string = print_string + c_text.vocab.itos[idx] + ', '
+        print("Current Triggers: " + print_string + " : " + str(get_accuracy(model, target_iter, criterion,trigger_token_ids).item()))
+    
+        # Get Average grad
+        ###
+        for batch in target_iter:
+            text, text_lengths = batch.text
+
+            optimizer.zero_grad()
+            # Reset extracted_grads as in next step we get element at index 0
+    
+            # RNN needs to be in train() to calculate gradient
+            # Hence, disable dropouts manually
+            model.train()
+            for name, module in model.named_modules():
+                if isinstance(module, nn.Dropout):
+                    module.p = 0
         
-                # RNN needs to be in train() to calculate gradient
-                # Hence, disable dropouts manually
-                model.train()
-                for name, module in model.named_modules():
-                    if isinstance(module, nn.Dropout):
-                        module.p = 0
-            
-                    elif isinstance(module, nn.LSTM):
-                        module.dropout = 0
-            
-                    elif isinstance(module, nn.GRU):
-                        module.dropout = 0
+                elif isinstance(module, nn.LSTM):
+                    module.dropout = 0
         
-                # Append trigger tokens
-                trigger_sequence_tensor = torch.LongTensor(copy.deepcopy(trigger_token_ids)).unsqueeze(1) # or 2
-                trigger_sequence_tensor = trigger_sequence_tensor.repeat(1, batch.label.shape[0]) # batch_size is global
-                b_text = torch.cat((trigger_sequence_tensor, text))
-                # Add text length
-                b_text_lengths = text_lengths + num_trigger_tokens
+                elif isinstance(module, nn.GRU):
+                    module.dropout = 0
+    
+            # Append trigger tokens
+            trigger_sequence_tensor = torch.LongTensor(copy.deepcopy(trigger_token_ids)).unsqueeze(1) # or 2
+            trigger_sequence_tensor = trigger_sequence_tensor.repeat(1, batch.label.shape[0]) # batch_size is global
+            b_text = torch.cat((trigger_sequence_tensor, text))
+            # Add text length
+            b_text_lengths = text_lengths + num_trigger_tokens
+    
+            y_pred = model(b_text.to(device), b_text_lengths.to(device)).squeeze(1)
+            loss = criterion(y_pred, batch.label.to(device))
+    
+            extracted_grads = []
+            loss.backward()
         
-                y_pred = model(b_text.to(device), b_text_lengths.to(device)).squeeze(1)
-                loss = criterion(y_pred, batch.label.to(device))
-        
-                extracted_grads = []
-                loss.backward()
-            
-                data_grad = extracted_grads[0]
-                averaged_grad = torch.sum(data_grad, dim=0)
-                # Get gradient of trigger tokens only
-                averaged_grad = averaged_grad[0:len(trigger_token_ids)]
-        
-                # print(averaged_grad.shape)
-                cand_trigger_token_ids = hotflip_attack(averaged_grad,
-                                                                model.embedding.weight,
-                                                                trigger_token_ids,
-                                                                num_candidates=2,
-                                                                increase_loss=True)
-                
-                trigger_token_ids = get_best_candidates(model,
-                                                            batch,
+            data_grad = extracted_grads[0]
+            averaged_grad = torch.sum(data_grad, dim=0)
+            # Get gradient of trigger tokens only
+            averaged_grad = averaged_grad[0:len(trigger_token_ids)]
+    
+            # print(averaged_grad.shape)
+            cand_trigger_token_ids = hotflip_attack(averaged_grad,
+                                                            model.embedding.weight,
                                                             trigger_token_ids,
-                                                            cand_trigger_token_ids)
-        print("Current Triggers: " + print_string + " : " + str(get_accuracy(model, target_iter, criterion, trigger_token_ids).item()))
+                                                            num_candidates=2,
+                                                            increase_loss=True)
+            
+            trigger_token_ids = get_best_candidates(model,
+                                                        batch,
+                                                        criterion,
+                                                        trigger_token_ids,
+                                                        cand_trigger_token_ids)
+    print_string = ""
+    for idx in trigger_token_ids:
+        print_string = print_string + c_text.vocab.itos[idx] + ', '
+    print("Current Triggers: " + print_string + " : " + str(get_accuracy(model, target_iter, criterion, trigger_token_ids).item()))
 
 if __name__ == "__main__":
     main()
