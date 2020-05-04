@@ -8,6 +8,8 @@ from copy import deepcopy
 import numpy
 from operator import itemgetter
 
+import torch
+
 def hotflip_attack(averaged_grad, embedding_matrix, trigger_token_ids,
                    increase_loss=False, num_candidates=1):
     """
