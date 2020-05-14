@@ -1,0 +1,20 @@
+.ipynb_checkpoints
+
+.DS_Store
+
+*.swp
+*.*~
+
+# LaTex                                                                     
+*.aux
+*.log
+*.pdf
+*.toc
+*.out
+*.lof
+*.lot
+*.prv
+*.blg
+*.dvi
+*.gz
+
