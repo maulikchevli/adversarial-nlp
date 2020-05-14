@@ -1,0 +1,39 @@
+\documentclass[12pt]{article}
+
+\usepackage{mathptmx}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{rotating}
+\usepackage{makecell}
+
+\usepackage{xcolor}
+\hypersetup{
+    colorlinks,
+    linkcolor={red!50!black},
+    citecolor={purple!50!black},
+    urlcolor={blue!80!black}
+}
+
+\usepackage[font=small,labelfont=bf,textfont=bf]{caption}
+%\newcommand{\cchapter}[1]{\chapter[#1]{\centering #1}}
+\usepackage[top=1.0in,bottom=1.0in,left=1.0in,right=1.0in]{geometry} 
+
+\usepackage{pdfpages}
+
+\begin{document}
+\includepdf[pages={1}]{certi.pdf}
+
+\section{Introduction}
+
+\section{Process Flow Diagram}
+
+\section{Output}
+
+\bibliography{report}
+\bibliographystyle{ieeetr}
+
+
+\end{document}
