@@ -9,6 +9,7 @@
 \usepackage{booktabs}
 \usepackage{rotating}
 \usepackage{makecell}
+\usepackage{subcaption}
 
 \usepackage{xcolor}
 \hypersetup{
@@ -56,7 +57,7 @@ In addition, since an adversarial attack changes the output of a model, it poses
 Hence, our objective for adversarial attacks is twofold: \textit{model evaluation and interpretation}, and \textit{exposing system vulnerability}.
 
 There are several ways to generate adversarial examples but we are interested in \textbf{Universal Adversarial Triggers} that can be applied on any input sequence in the domain.
-These are input independent sequence of tokens, which, when concatenated with input text, fools NLP models to mispredict. Since these tokens are input-agnostic, they pose a bigger threat that input-specific pertrubations, as they can be ditributed to a large number and they work on majority of inputs. Additional, global model behaviour insights can be drawn upon by universal triggers \cite{wallace2019}. In the project, we try to generate universal adversarial triggers for Text Classification NLP task.
+These are input independent sequence of tokens, which, when concatenated with input text, fools NLP models to mispredict. Since these tokens are input-agnostic, they pose a bigger threat that input-specific pertrubations, as they can be ditributed to a large number and they work on majority of inputs. Additional, global model behaviour insights can be drawn upon by universal triggers \cite{wallace2019}. In the project, we try to generate universal adversarial triggers for Text Classification NLP task as done in \cite{wallace2019, behjati2019}.
 % about UNiversal triggers
 
 \section{Text Classification}
@@ -111,6 +112,10 @@ Fig. \ref{liang_sen} shows how addition of sentence causes model to misclassify 
 \end{figure}
 
 \subsection{Universal Adversarial triggers}
+\label{adv_theory}
+Universal triggers are poses highest fom of adversarial threat for two reasons: (1) Access to target model is not required at target time (2) they decrease the barrier for an adversary. In addition, as noted by Moosavi-Dezfooli et al. \cite{moosavi-dezfooli}, universal triggers are often transferable accross models. Hence, an adversary might not need White-box, or gradients, access to a model and can even attack black-box targets.
+Moreover, universal triggers are unique evaluation tools as they reveal general input-output patterns learnt by the model. This is used to learn about the biases learnt from the dataset.
+\par
 In Universal Adversarial triggers, we search for pertrubations at word level.
 We try to find input-agnostic words that can be inserted in original sentence.
 More specifically, we want a sequence of words $w$ that can be concatenated to input $s$ belonging to probablity distribution $P(L)$ that causes classifer $f$ to mispredict.
@@ -133,10 +138,106 @@ universal. We constrain equation \ref{adv_s} to insert adversarial triggers at t
   s' = w \oplus s = w_1...w_m \cdot s_1...s_n
 \end{equation}
 
+\paragraph{Problem statement}
+We seek to find Universal Adversarial triggers $w$ that when appended to \ref{eq: trigger} will cause $f$ to misclassify. This problem is solved by finding solution $\hat{w}$ of equation \ref{eq: optim}.
+
+% TODO write WHITE box is required
+
 \chapter{Process Flow Diagram}
+Top level process flow is shown in Fig. \ref{img: top_level}. The project can be logically divided into two models - \textit{Classifier} and \textit{Generator}. \textit{Classifer} calculates the categorical class of the input text, while \textit{Generator} is used to generate adversarial triggers for this classifier. \textit{Generator} requires the \textit{gradients} of the \textit{Classifier} as we employ White-box attack on it.
+
+Ideally, triggers should be stealthy enough that they should fool humans and they should not be too obvious like ``best'' when targeting negative example.
+However, the latter situation can be made stealthy by injecting triggers inbetween the words rather than at end points.
+
+\begin{figure}[!h]
+  \centering
+  \includegraphics[width=0.8\linewidth]{./img/top_level.png}
+  \caption{Top Level Process Flow}
+  \label{img: top_level}
+\end{figure}
+
+
+\section{Classifier}
+In this project, we train a \textit{Convolutional Neural Network} to classify \textit{Sentiment} of the input text as positive or negative.
+ \paragraph{Dataset}
+We train our classifier on IMDB dataset \cite{imdb}. It consists of $50,000$ movie reviews from IMBD. It is a binary sentiment classification dataset containing same number of positive and negative reviews. It is constructed only from highly polar review i.e. $\geq$ 7 out of 10 for positive set and $\leq$ 4 out of 10 for negative set. The dataset is evenly divided into training data and testing data consisting of $25000$ movie reviews each.
+
+\paragraph{Pre-Processing}
+In order to convert sentence to something suitable for computation, preprocessing is required.
+IMBD data contains html tags like line breaker, so firstly, we remove html tags using python's regex library. We also remove numbers from the moview reviews.
+Next, we use spaCy \cite{spacy} to tokenize this sanitized string.
+The tokens are then converted to integers using a fixed vocabulary size and a Vocab lookup table. This is a bidirectional lookup where given a word it outputs its integer value and given integer value its returns its corresponding word.
+ 
+\paragraph{Embeddings}
+We use GloVe \cite{glove} word embeddings to represent words as feature vectors.
+In particular, we use Glove.6B which has 6 Billion tokens, 400 Thousand uncased vocabulary, and 100 vector dimensions.
+
+\paragraph{Architecture}
+We use a CNN to classify senetences. The architecture is referred from \cite{kim2014}.
+CNN emulates an n-gram model. Suppose the size of kernel is $3 \times m$, where $m$ is the embedding dimension, then the convolution operation takes $3$ consecutive words together and applies the function over it. Hence, it performs operations on tri-grams of the text.
+The architecture of CNN is as shown in the Fig. \ref{img: archi}.
+
+\begin{figure}[!h]
+  \centering
+  \includegraphics[width=\linewidth]{./img/archi.png}
+  \caption{CNN architecture}
+  \label{img: archi}
+\end{figure}
+
+Our CNN contains 3 filters sizes of $3 \times m$, $4 \times m$, and $5 \times m$, and each size has 100 instances. Hence, we use tri-grams, tetra-grams, and penta-grams of input text to decide its category. 
+
+The output of convolutions are passed through a max pool layer. The idea here is that the feature with maximum value is the critical feature for determining the sentiment of the review.
+Then, vectors are concatenated to create a single vector and are passed through Fully Connected Linear(Dense) layer to obtain a single value which corresponds to sentiment of the text.
+Continuous value is discretize by passing it through a sigmoid function, and hence, the text is classified into one of the two classes. We use \textit{BCEWithLogitsLoss} loss function implemented in PyTorch \cite{pytorch} as Loss function. It is a Binary Cross Entropy Loss and a Sigmoid layer in one class.
+
+\begin{figure}[ht!]
+    \centering
+    \begin{subfigure}[t]{0.5\textwidth}
+        \centering
+        \includegraphics[height=1.2in]{./img/conv_work.png}
+        \caption{CNN extracts n-grams}
+    \end{subfigure}%
+    ~ 
+    \begin{subfigure}[t]{0.5\textwidth}
+        \centering
+        \includegraphics[height=1.2in]{./img/pool_work.png}
+        \caption{Max pool}
+    \end{subfigure}
+    \caption{CNN for sentiment analyis}
+ \end{figure}
+  
+% TODO write about all the hyperparamerters used.
+\section{Trigger Generation}
+We want to generate trigger words that can attack a targeted class. Ideally, the triggers should be stealthy 
+As defined in equation \ref{eq: trigger}, we want to find an advesarial example in which trigger words are prepended to actual sentence. To find the triggers, we optimizer equation \ref{eq: optim}. Since, it is an optimizing problem, it can be given as search algorithm.
+
+\subsection*{Trigger Search Algorithm}
+Initially, length of trigger words is chosen. Shorter triggers are more stealthy, while longer triggers are more successful. The words are initialized by the value ``the'', then to optimize the loss function, we iteratively replace trigger tokens over a batch of data. As language is discrete, we use a variant of Hotflip \cite{ebrahimi2018} attack designed by Wallace et al \cite{wallace2019}. Hotflip approximtes the effect of replacing a token using its gradient and embedding space.
+
+\paragraph{Token Replacement Strategy}
+This Hotflip based token replacement is based on linaer approximation of the loss function as it converges faster.
+The embedding for every trigger token $e_{adv_i}$ is updated to minimizes the loss’ first-order Taylor approximation around the current token embedding:
+\begin{equation}
+  \label{eq: approx_loss}
+  \underset{e_{i}' \in \mathcal{V}}{argmin} \; [e -  e_{adv_i}]^T \; \nabla_{e_{adv_i}} \mathcal{L}
+\end{equation}
+where, $\mathcal{V}$ is the set of all token embeddings in the model’s vocabulary and $\nabla_{e_{adv_i}} \mathcal{L}$ is the average gradient of the task loss over a batch.
+Finnaly, this token $e_{adv_i}$ in embeddeing space is converted to word space. Fig. \ref{trigger_algo} illustrates this algorithm.
+
+\begin{figure}[!h]
+  \centering
+  \includegraphics[width=0.8\linewidth]{./img/trigger_algo.png}
+  \caption{Trigger Search Algorithm by Wallace et. al. \cite{wallace2019}}
+  \label{trigger_algo}
+\end{figure}
+
+With the help of beam search, this algorithm is further augmented. Top-$k$ tokens from equation \ref{eq: approx_loss} are considered as candidates to replace current trigger tokens. For every candidate token, its loss with current batch is calculated and one with the optimum loss is chosen. The beam size are constrained as per computation power.
+
+\paragraph{Implementation}
+We ``hook'' a pointer on the word embeddings to get its gradients needed to perform trigger search. The gradients obtained for a batch are averaged and only gradients of trigger tokens are passed to \textit{hotflip} function.
+\textit{Hotflip} function takes the averaged gradients and word embedding matrix, and extracts top-$k$ candidates from the product of gradients and embeddings. We keep the value of $k = 5$ for computation constraints. With this top canidates, a left to right beam search is carried to obtain new trigger tokens.
 
 \chapter{Output}
-\cite{behjati2019}
 \end{spacing}
 
 \bibliography{report}
