@@ -57,11 +57,11 @@ In addition, since an adversarial attack changes the output of a model, it poses
 Hence, our objective for adversarial attacks is twofold: \textit{model evaluation and interpretation}, and \textit{exposing system vulnerability}.
 
 There are several ways to generate adversarial examples but we are interested in \textbf{Universal Adversarial Triggers} that can be applied on any input sequence in the domain.
-These are input independent sequence of tokens, which, when concatenated with input text, fools NLP models to mispredict. Since these tokens are input-agnostic, they pose a bigger threat that input-specific pertrubations, as they can be ditributed to a large number and they work on majority of inputs. Additional, global model behaviour insights can be drawn upon by universal triggers \cite{wallace2019}. In the project, we try to generate universal adversarial triggers for Text Classification NLP task as done in \cite{wallace2019, behjati2019}.
+These are input independent sequence of tokens, which, when concatenated with input text, fools NLP models to mispredict. Since these tokens are input-agnostic, they pose a bigger threat than input-specific pertrubations, as they can be distributed to a large number and they work on majority of inputs. Additionally, global model behaviour insights can be drawn upon by universal triggers \cite{wallace2019}. In this project, we try to generate universal adversarial triggers for Text Classification NLP task as done in \cite{wallace2019, behjati2019}.
 % about UNiversal triggers
 
 \section{Text Classification}
-Text Classification is a categorization problem in which a text, sentence, or documents is assigned a predefined tag according to its content. It is one of the fundamental problem in Natural Language Processing which can be solved with various techniques like \textit{knowledge based methods, statical methods}, and other hybrid techniques.
+Text Classification is a categorization problem in which a text, sentence, or document is assigned a predefined tag according to its content. It is one of the fundamental problems in Natural Language Processing which can be solved with various techniques like \textit{knowledge based methods, statical methods}, and other hybrid techniques.
 Some real world examples of Text classification includes:
 \begin{enumerate}
 \item Spam Filters
@@ -113,7 +113,7 @@ Fig. \ref{liang_sen} shows how addition of sentence causes model to misclassify 
 
 \subsection{Universal Adversarial triggers}
 \label{adv_theory}
-Universal triggers are poses highest fom of adversarial threat for two reasons: (1) Access to target model is not required at target time (2) they decrease the barrier for an adversary. In addition, as noted by Moosavi-Dezfooli et al. \cite{moosavi-dezfooli}, universal triggers are often transferable accross models. Hence, an adversary might not need White-box, or gradients, access to a model and can even attack black-box targets.
+Universal triggers poses highest form of adversarial threat for two reasons: (1) Access to target model is not required at target time (2) they decrease the barrier for an adversary. In addition, as noted by Moosavi-Dezfooli et al. \cite{moosavi-dezfooli}, universal triggers are often transferable accross models. Hence, an adversary might not need White-box, or gradients, access to a model and can even attack black-box targets.
 Moreover, universal triggers are unique evaluation tools as they reveal general input-output patterns learnt by the model. This is used to learn about the biases learnt from the dataset.
 \par
 In Universal Adversarial triggers, we search for pertrubations at word level.
@@ -125,28 +125,28 @@ Hence, our adversarial example $s'$ will be of the form:
   s' = w \oplus s = s_i...s_k | w_1...w_m | s_{k+1}...s_j; \; (i,j) \in [0, len(s)] 
 \end{equation}
 
-To get the value or $w$, we maximize the classifier loss over all dataset. If true output is $y$, then the optimization needed to be solved is,
+To get the value of $w$, we maximize the classifier loss over all dataset. If true output is $y$, then the optimization needed to be solved is,
 \begin{equation}
   \label{eq: optim}
   \hat{w} = \underset{w}{argmax} \; \mathcal{E}_{s \sim P(L)}[\mathcal{L}(y, f(s'))]
 \end{equation}
 Since we are optimizing the expected loss with respect to the
 data distribution, the resulting sequence $\hat{w}$ would ideally be
-universal. We constrain equation \ref{adv_s} to insert adversarial triggers at the beginning of the sentence. Hence, out $s'$ becomes:
+universal. We constrain equation \ref{adv_s} to insert adversarial triggers at the beginning of the sentence. Hence, our $s'$ becomes:
 \begin{equation}
   \label{eq: trigger}
   s' = w \oplus s = w_1...w_m \cdot s_1...s_n
 \end{equation}
 
 \paragraph{Problem statement}
-We seek to find Universal Adversarial triggers $w$ that when appended to \ref{eq: trigger} will cause $f$ to misclassify. This problem is solved by finding solution $\hat{w}$ of equation \ref{eq: optim}.
+We seek to find Universal Adversarial triggers $w$ that when appended to \ref{eq: trigger} will cause $f$ to misclassify. This problem is solved by finding solution $\hat{w}$ of equation \ref{eq: optim}. Through this adversarial attack, we check the robustness of the system as well as check the scope of bias and noise leading to oversensitivity to input.
 
 % TODO write WHITE box is required
 
 \chapter{Process Flow Diagram}
-Top level process flow is shown in Fig. \ref{img: top_level}. The project can be logically divided into two models - \textit{Classifier} and \textit{Generator}. \textit{Classifer} calculates the categorical class of the input text, while \textit{Generator} is used to generate adversarial triggers for this classifier. \textit{Generator} requires the \textit{gradients} of the \textit{Classifier} as we employ White-box attack on it.
+ The project can be logically divided into two modules - \textit{Classifier} and \textit{Generator}. \textit{Classifer} calculates the categorical class of the input text, while \textit{Generator} is used to generate adversarial triggers for this classifier. \textit{Generator} requires the \textit{gradients} of the \textit{Classifier} as we employ White-box attack on it. Top level process flow is shown in Fig \ref{img: top_level}.
 
-Ideally, triggers should be stealthy enough that they should fool humans and they should not be too obvious like ``best'' when targeting negative example.
+Ideally, triggers should be stealthy enough that they should fool humans and they should not be too obvious - like ``best'' when targeting negative example.
 However, the latter situation can be made stealthy by injecting triggers inbetween the words rather than at end points.
 
 \begin{figure}[!h]
@@ -164,9 +164,9 @@ We train our classifier on IMDB dataset \cite{imdb}. It consists of $50,000$ mov
 
 \paragraph{Pre-Processing}
 In order to convert sentence to something suitable for computation, preprocessing is required.
-IMBD data contains html tags like line breaker, so firstly, we remove html tags using python's regex library. We also remove numbers from the moview reviews.
+IMBD data contains html tags like line breaker, so first, we remove html tags using python's regex library. We also remove numbers from the moview reviews.
 Next, we use spaCy \cite{spacy} to tokenize this sanitized string.
-The tokens are then converted to integers using a fixed vocabulary size and a Vocab lookup table. This is a bidirectional lookup where given a word it outputs its integer value and given integer value its returns its corresponding word.
+The tokens are then converted to integers using a fixed vocabulary size ($25000$ in our case) and a Vocab lookup table. This is a bidirectional lookup where given a word it outputs its integer value and given integer value its returns its corresponding word.
  
 \paragraph{Embeddings}
 We use GloVe \cite{glove} word embeddings to represent words as feature vectors.
@@ -238,8 +238,84 @@ We ``hook'' a pointer on the word embeddings to get its gradients needed to perf
 \textit{Hotflip} function takes the averaged gradients and word embedding matrix, and extracts top-$k$ candidates from the product of gradients and embeddings. We keep the value of $k = 5$ for computation constraints. With this top canidates, a left to right beam search is carried to obtain new trigger tokens.
 
 \chapter{Output}
+\section{Classifier}
+Fig. \ref{model_param} shows the parameters and hyper paramters of our model. Number of trainable paramters of outr CNN is $2620801$. Other hyperparamters include learning rate which we kept as $0.001$.
+
+\begin{figure}[!h]
+  \centering
+  \includegraphics[width=0.6\linewidth]{./img/output/model_param.png}
+  \caption{Model parameters and hyperparameters}
+  \label{model_param}
+\end{figure}
+
+The confusion matrix of the predictions made by our model is shown in Fig. \ref{cm_og}. The number of True positives are $11333$, True Negatives $10654$, False Positive $1167$, and False Negative $1846$. Hence, the accuracy of the model is $87.948\%$
+
+\begin{figure}[ht!]
+    \centering
+    \begin{subfigure}[t]{0.3\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{./img/output/cm_og.png}
+        \caption{Confusion matrix of model predictions}
+        \label{cm_og}
+    \end{subfigure}%
+    ~ 
+    \begin{subfigure}[t]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{./img/output/train_loop.png}
+        \caption{Train Loop}
+    \end{subfigure}
+    \caption{Model Training}
+ \end{figure}
+
+\section{Trigger Generation}
+Fig. \ref{img: trig} shows how the addition of trigger words ``unisol unisol roesnlski'' decrease sensitivity(true positive rate) which implies accuracy of the model also decreases.
+
+\begin{figure}[!h]
+  \centering
+  \includegraphics[width=0.8\linewidth]{./img/output/trig.png}
+  \caption{Generating Triggers}
+  \label{img: trig}
+\end{figure}
+
+Some examples demonstrating the effect of Adversarial triggers are shown in Fig. 3.4. These examples point out that our model might be picking up on some biases and noises which leads to oversensitivity to some inputs.
+
+\begin{figure}[h!]
+    \label{img: adv_eg}
+    \centering
+    \begin{subfigure}[t]{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{./img/output/eg_1.png}
+        \caption{Eg 1}
+        \label{img: eg1}
+    \end{subfigure}
+    
+    \begin{subfigure}[t]{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{./img/output/eg_1.png}
+        \caption{Eg 2}
+        \label{img: eg2}
+    \end{subfigure}%
+
+    \begin{subfigure}[t]{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{./img/output/eg_3.png}
+        \caption{Eg 3}
+        \label{img: eg3}
+    \end{subfigure}%
+
+    \begin{subfigure}[t]{\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{./img/output/eg_4.png}
+        \caption{Eg 4}
+        \label{img: eg4}
+    \end{subfigure}%
+
+    \caption{Universal Adversarial Trigger examples}
+ \end{figure}
+
 \end{spacing}
 
+\renewcommand{\bibname}{References}
 \bibliography{report}
 \bibliographystyle{ieeetr}
 
