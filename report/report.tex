@@ -35,8 +35,10 @@
 \usepackage{pdfpages}
 
 \begin{document}
+\pagenumbering{gobble}
 \includepdf[pages={1}]{certi.pdf}
 
+\pagenumbering{arabic}
 \begin{spacing}{1.5}
 \chapter{Introduction}
 
@@ -113,12 +115,12 @@ Fig. \ref{liang_sen} shows how addition of sentence causes model to misclassify 
 
 \subsection{Universal Adversarial triggers}
 \label{adv_theory}
-Universal triggers poses highest form of adversarial threat for two reasons: (1) Access to target model is not required at target time (2) they decrease the barrier for an adversary. In addition, as noted by Moosavi-Dezfooli et al. \cite{moosavi-dezfooli}, universal triggers are often transferable accross models. Hence, an adversary might not need White-box, or gradients, access to a model and can even attack black-box targets.
+Universal triggers poses highest form of adversarial threat for two reasons: (1) Access to target model is not required at target time (2) they decrease the barrier for an adversary. In addition, as noted by Moosavi-Dezfooli et al. \cite{moosavi-dezfooli}, universal triggers are often transferable across models. Hence, an adversary might not need White-box, or gradients, access to a model and can even attack black-box targets.
 Moreover, universal triggers are unique evaluation tools as they reveal general input-output patterns learnt by the model. This is used to learn about the biases learnt from the dataset.
 \par
-In Universal Adversarial triggers, we search for pertrubations at word level.
+In Universal Adversarial triggers, we search for perturbations at word level.
 We try to find input-agnostic words that can be inserted in original sentence.
-More specifically, we want a sequence of words $w$ that can be concatenated to input $s$ belonging to probablity distribution $P(L)$ that causes classifer $f$ to mispredict.
+More specifically, we want a sequence of words $w$ that can be concatenated to input $s$ belonging to probability distribution $P(L)$ that causes classifier $f$ to mispredict.
 Hence, our adversarial example $s'$ will be of the form:
 \begin{equation}
   \label{adv_s}
@@ -164,7 +166,7 @@ We train our classifier on IMDB dataset \cite{imdb}. It consists of $50,000$ mov
 
 \paragraph{Pre-Processing}
 In order to convert sentence to something suitable for computation, preprocessing is required.
-IMBD data contains html tags like line breaker, so first, we remove html tags using python's regex library. We also remove numbers from the moview reviews.
+IMBD data contains html tags like line breaker, so first, we remove html tags using python's regex library. We also remove numbers from the movie reviews.
 Next, we use spaCy \cite{spacy} to tokenize this sanitized string.
 The tokens are then converted to integers using a fixed vocabulary size ($25000$ in our case) and a Vocab lookup table. This is a bidirectional lookup where given a word it outputs its integer value and given integer value its returns its corresponding word.
  
@@ -173,7 +175,7 @@ We use GloVe \cite{glove} word embeddings to represent words as feature vectors.
 In particular, we use Glove.6B which has 6 Billion tokens, 400 Thousand uncased vocabulary, and 100 vector dimensions.
 
 \paragraph{Architecture}
-We use a CNN to classify senetences. The architecture is referred from \cite{kim2014}.
+We use a CNN to classify sentences. The architecture is referred from \cite{kim2014}.
 CNN emulates an n-gram model. Suppose the size of kernel is $3 \times m$, where $m$ is the embedding dimension, then the convolution operation takes $3$ consecutive words together and applies the function over it. Hence, it performs operations on tri-grams of the text.
 The architecture of CNN is as shown in the Fig. \ref{img: archi}.
 
@@ -208,21 +210,21 @@ Continuous value is discretize by passing it through a sigmoid function, and hen
   
 % TODO write about all the hyperparamerters used.
 \section{Trigger Generation}
-We want to generate trigger words that can attack a targeted class. Ideally, the triggers should be stealthy 
-As defined in equation \ref{eq: trigger}, we want to find an advesarial example in which trigger words are prepended to actual sentence. To find the triggers, we optimizer equation \ref{eq: optim}. Since, it is an optimizing problem, it can be given as search algorithm.
+We want to generate trigger words that can attack a targeted class. 
+As defined in equation \ref{eq: trigger}, we want to find an adversarial example in which trigger words are prepended to actual sentence. To find the triggers, we optimizer equation \ref{eq: optim}. Since, it is an optimizing problem, it can be given as search algorithm.
 
 \subsection*{Trigger Search Algorithm}
-Initially, length of trigger words is chosen. Shorter triggers are more stealthy, while longer triggers are more successful. The words are initialized by the value ``the'', then to optimize the loss function, we iteratively replace trigger tokens over a batch of data. As language is discrete, we use a variant of Hotflip \cite{ebrahimi2018} attack designed by Wallace et al \cite{wallace2019}. Hotflip approximtes the effect of replacing a token using its gradient and embedding space.
+Initially, length of trigger words is chosen. Shorter triggers are more stealthy, while longer triggers are more successful. The words are initialized by the value ``the'', then to optimize the loss function, we iteratively replace trigger tokens over a batch of data. As language is discrete, we use a variant of Hotflip \cite{ebrahimi2018} attack designed by Wallace et al \cite{wallace2019}. Hotflip approximates the effect of replacing a token using its gradient and embedding space.
 
 \paragraph{Token Replacement Strategy}
-This Hotflip based token replacement is based on linaer approximation of the loss function as it converges faster.
+This Hotflip based token replacement is based on linear approximation of the loss function as it converges faster.
 The embedding for every trigger token $e_{adv_i}$ is updated to minimizes the loss’ first-order Taylor approximation around the current token embedding:
 \begin{equation}
   \label{eq: approx_loss}
   \underset{e_{i}' \in \mathcal{V}}{argmin} \; [e -  e_{adv_i}]^T \; \nabla_{e_{adv_i}} \mathcal{L}
 \end{equation}
 where, $\mathcal{V}$ is the set of all token embeddings in the model’s vocabulary and $\nabla_{e_{adv_i}} \mathcal{L}$ is the average gradient of the task loss over a batch.
-Finnaly, this token $e_{adv_i}$ in embeddeing space is converted to word space. Fig. \ref{trigger_algo} illustrates this algorithm.
+Finally, this token $e_{adv_i}$ in embedding space is converted to word space. Fig. \ref{trigger_algo} illustrates this algorithm.
 
 \begin{figure}[!h]
   \centering
@@ -235,11 +237,11 @@ With the help of beam search, this algorithm is further augmented. Top-$k$ token
 
 \paragraph{Implementation}
 We ``hook'' a pointer on the word embeddings to get its gradients needed to perform trigger search. The gradients obtained for a batch are averaged and only gradients of trigger tokens are passed to \textit{hotflip} function.
-\textit{Hotflip} function takes the averaged gradients and word embedding matrix, and extracts top-$k$ candidates from the product of gradients and embeddings. We keep the value of $k = 5$ for computation constraints. With this top canidates, a left to right beam search is carried to obtain new trigger tokens.
+\textit{Hotflip} function takes the averaged gradients and word embedding matrix, and extracts top-$k$ candidates from the product of gradients and embeddings. We keep the value of $k = 5$ for computation constraints. With this top candidates, a left to right beam search is carried to obtain new trigger tokens.
 
 \chapter{Output}
 \section{Classifier}
-Fig. \ref{model_param} shows the parameters and hyper paramters of our model. Number of trainable paramters of outr CNN is $2620801$. Other hyperparamters include learning rate which we kept as $0.001$.
+Fig. \ref{model_param} shows the parameters and hyper parameters of our model. Number of trainable parameters of our CNN is $2620801$. Other hyper parameters include learning rate which we kept as $0.001$.
 
 \begin{figure}[!h]
   \centering
@@ -248,7 +250,7 @@ Fig. \ref{model_param} shows the parameters and hyper paramters of our model. Nu
   \label{model_param}
 \end{figure}
 
-The confusion matrix of the predictions made by our model is shown in Fig. \ref{cm_og}. The number of True positives are $11333$, True Negatives $10654$, False Positive $1167$, and False Negative $1846$. Hence, the accuracy of the model is $87.948\%$
+The confusion matrix of the predictions made by our model is shown in Fig. \ref{cm_og}. The number of True positives are $11333$, True Negative $10654$, False Positive $1167$, and False Negative $1846$. Hence, the accuracy of the model is $87.948\%$
 
 \begin{figure}[ht!]
     \centering
@@ -268,7 +270,7 @@ The confusion matrix of the predictions made by our model is shown in Fig. \ref{
  \end{figure}
 
 \section{Trigger Generation}
-Fig. \ref{img: trig} shows how the addition of trigger words ``unisol unisol roesnlski'' decrease sensitivity(true positive rate) which implies accuracy of the model also decreases.
+Fig. \ref{img: trig} shows how the addition of trigger words ``unisol unisol rosenlski'' decrease sensitivity(true positive rate) which implies accuracy of the model also decreases.
 
 \begin{figure}[!h]
   \centering
